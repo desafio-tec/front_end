@@ -37,22 +37,21 @@ const Register = () => {
             }
         } catch (error) {
             console.error("Erro na verificação:", error);
-            // Em caso de erro de rede, voltamos para idle para não bloquear o usuário injustamente
             setLoginStatus('idle');
         }
     }, []);
 
-    // MELHORIA: useEffect com Debounce (800ms) para não sobrecarregar a API
+    // OTMIZAÇÃO: Debounce reduzido para 400ms (2x mais rápido que os 800ms anteriores)
     useEffect(() => {
         if (formData.login.length >= 3) {
-            // Define o status como checking imediatamente ao começar a digitar
+            // Mostra o spinner de verificação quase instantaneamente
             setLoginStatus('checking');
 
             const timer = setTimeout(() => {
                 checkLoginAvailability(formData.login);
-            }, 800); // Aguarda o usuário parar de digitar por 0.8s
+            }, 400); // Metade do tempo anterior
 
-            return () => clearTimeout(timer); // Limpa o timer se o usuário digitar outra tecla
+            return () => clearTimeout(timer);
         } else {
             setLoginStatus('idle');
         }
@@ -63,11 +62,8 @@ const Register = () => {
         setFormData((prev) => ({ ...prev, [name]: value }));
         setApiErrors(prev => ({ ...prev, [name]: '', general: '' }));
 
-        // Reset imediato do status de erro ao digitar no login
-        if (name === 'login') {
-            if (value.length < 3) {
-                setLoginStatus('idle');
-            }
+        if (name === 'login' && value.length < 3) {
+            setLoginStatus('idle');
         }
 
         if (name === 'name') {
@@ -79,7 +75,7 @@ const Register = () => {
         }
     };
 
-    // VALIDAÇÃO: Libera o botão se os requisitos visuais forem atendidos e o login não estiver confirmado como 'taken'
+    // VALIDAÇÃO: Libera o botão se os requisitos visuais forem atendidos
     const isFormValid =
         formData.name.trim().includes(' ') &&
         formData.password.length >= 8 &&
@@ -137,7 +133,6 @@ const Register = () => {
                                         placeholder="Login"
                                         value={formData.login}
                                         onChange={handleChange}
-                                        // O erro visual só aparece se o status for estritamente 'taken'
                                         isInvalid={formData.login.length >= 3 && loginStatus === 'taken'}
                                         isValid={loginStatus === 'available'}
                                     />
