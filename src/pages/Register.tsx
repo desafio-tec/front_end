@@ -11,17 +11,22 @@ const Register = () => {
         password: ''
     });
     const [loading, setLoading] = useState(false);
+
+    // O estado inicial deve ser 'idle' para não mostrar erro ao carregar a página
     const [loginStatus, setLoginStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+
     const [passwordCriteria, setPasswordCriteria] = useState({
         length: false,
         upper: false,
         number: false
     });
+
     const [apiErrors, setApiErrors] = useState({ general: '', login: '', password: '', name: '' });
     const navigate = useNavigate();
 
     const checkLoginAvailability = useCallback(async (login: string) => {
-        if (!login || login.length < 3) {
+        // Se tiver menos de 3 caracteres, limpamos o status e não mostramos erro
+        if (!login || login.trim().length < 3) {
             setLoginStatus('idle');
             return;
         }
@@ -29,8 +34,6 @@ const Register = () => {
         setLoginStatus('checking');
         try {
             const response = await api.get(`/api/Auth/check-login?login=${login}`);
-
-            // LÓGICA CORRIGIDA: Só marca como 'taken' se o back-end disser explicitamente que NÃO está disponível
             const isAvailable = response.data === true || response.data?.available === true;
 
             if (isAvailable) {
@@ -39,19 +42,22 @@ const Register = () => {
                 setLoginStatus('taken');
             }
         } catch (error) {
-            // Se a API falhar (CORS, 404, etc), não bloqueamos o usuário.
-            // Deixamos o erro para o momento do Submit.
+            console.error("Erro na verificação:", error);
+            // Se a API falhar, voltamos para idle para não exibir "login em uso" por engano
             setLoginStatus('idle');
         }
     }, []);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            if (formData.login) {
+        // Só dispara a busca se houver pelo menos 3 caracteres
+        if (formData.login.length >= 3) {
+            const timer = setTimeout(() => {
                 checkLoginAvailability(formData.login);
-            }
-        }, 500);
-        return () => clearTimeout(timer);
+            }, 600); // Um tempo um pouco maior para evitar requisições inúteis
+            return () => clearTimeout(timer);
+        } else {
+            setLoginStatus('idle');
+        }
     }, [formData.login, checkLoginAvailability]);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -59,11 +65,14 @@ const Register = () => {
         setFormData((prev) => ({ ...prev, [name]: value }));
         setApiErrors(prev => ({ ...prev, [name]: '', general: '' }));
 
-        if (name === 'login') setLoginStatus('idle');
+        if (name === 'login') {
+            // Se o usuário apagar o campo, o erro some imediatamente
+            if (value.length < 3) setLoginStatus('idle');
+        }
 
         if (name === 'name') {
             if (value.trim() && !value.trim().includes(' ')) {
-                setApiErrors(prev => ({ ...prev, name: 'Por favor, insira seu nome e sobrenome' }));
+                setApiErrors(prev => ({ ...prev, name: 'Insira nome e sobrenome' }));
             } else {
                 setApiErrors(prev => ({ ...prev, name: '' }));
             }
@@ -80,12 +89,12 @@ const Register = () => {
 
     const isPasswordValid = !!(passwordCriteria.length && passwordCriteria.upper && passwordCriteria.number);
 
-    // DESTRAVADO: O botão agora ignora o 'checking' e só bloqueia se o status for confirmadamente 'taken'
+    // O botão SÓ libera se: Nome OK + Senha OK + Login disponível confirmado
     const isFormValid =
         formData.name.trim().includes(' ') &&
         isPasswordValid &&
         formData.login.length >= 3 &&
-        loginStatus !== 'taken' &&
+        loginStatus === 'available' &&
         !loading;
 
     const handleSubmit = async (e: FormEvent) => {
@@ -101,19 +110,8 @@ const Register = () => {
             navigate('/');
         } catch (error: any) {
             const data = error.response?.data;
-            const msg = data?.message || (typeof data === 'string' ? data : "Erro ao realizar cadastro.");
-
-            if (typeof msg === 'string') {
-                if (msg.toLowerCase().includes('login')) {
-                    setApiErrors(prev => ({ ...prev, login: msg }));
-                    setLoginStatus('taken'); // Sincroniza o status caso o back acuse erro
-                } else if (msg.toLowerCase().includes('senha') || msg.toLowerCase().includes('password')) {
-                    setApiErrors(prev => ({ ...prev, password: msg }));
-                } else {
-                    setApiErrors(prev => ({ ...prev, general: msg }));
-                }
-            }
-            toast.error(typeof msg === 'string' ? msg : "Erro no cadastro.");
+            const msg = data?.message || "Erro ao realizar cadastro.";
+            toast.error(msg);
         } finally {
             setLoading(false);
         }
@@ -129,7 +127,7 @@ const Register = () => {
                         <Form.Control
                             type="text"
                             name="name"
-                            placeholder="Digite seu nome e sobrenome"
+                            placeholder="Nome e Sobrenome"
                             value={formData.name}
                             onChange={handleChange}
                             isInvalid={!!apiErrors.name}
@@ -146,10 +144,11 @@ const Register = () => {
                                     <Form.Control
                                         type="text"
                                         name="login"
-                                        placeholder="Mínimo 3 caracteres"
+                                        placeholder="Min. 3 caracteres"
                                         value={formData.login}
                                         onChange={handleChange}
-                                        isInvalid={loginStatus === 'taken' || !!apiErrors.login}
+                                        // Só exibe erro (borda vermelha) se o status for REALMENTE 'taken'
+                                        isInvalid={loginStatus === 'taken'}
                                         isValid={loginStatus === 'available'}
                                         required
                                     />
@@ -158,8 +157,9 @@ const Register = () => {
                                             <Spinner size="sm" animation="border" />
                                         </div>
                                     )}
+                                    {/* A mensagem abaixo só aparece se o isInvalid for true */}
                                     <Form.Control.Feedback type="invalid">
-                                        {apiErrors.login || "Este login já está em uso."}
+                                        Este login já está em uso.
                                     </Form.Control.Feedback>
                                 </div>
                             </Form.Group>
@@ -173,10 +173,8 @@ const Register = () => {
                                     placeholder="8+ chars, A-Z, 0-9"
                                     value={formData.password}
                                     onChange={handleChange}
-                                    isInvalid={!!apiErrors.password}
                                     required
                                 />
-                                <Form.Control.Feedback type="invalid">{apiErrors.password}</Form.Control.Feedback>
                                 <div className="password-strength-meter mt-2">
                                     <div className="d-flex gap-2">
                                         <div className={`strength-dot ${passwordCriteria.length ? 'valid' : ''}`}></div>
