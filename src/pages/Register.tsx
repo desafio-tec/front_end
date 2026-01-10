@@ -12,14 +12,7 @@ const Register = () => {
     });
     const [loading, setLoading] = useState(false);
 
-    // O estado inicial deve ser 'idle' para não mostrar erro ao carregar a página
     const [loginStatus, setLoginStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
-
-    const [passwordCriteria, setPasswordCriteria] = useState({
-        length: false,
-        upper: false,
-        number: false
-    });
 
     const [apiErrors, setApiErrors] = useState({ general: '', login: '', password: '', name: '' });
     const navigate = useNavigate();
@@ -78,23 +71,13 @@ const Register = () => {
             }
         }
 
-        if (name === 'password') {
-            setPasswordCriteria({
-                length: value.length >= 8,
-                upper: /[A-Z]/.test(value),
-                number: /[0-9]/.test(value)
-            });
-        }
-    };
+    }
 
-    const isPasswordValid = !!(passwordCriteria.length && passwordCriteria.upper && passwordCriteria.number);
-
-    // O botão SÓ libera se: Nome OK + Senha OK + Login disponível confirmado
+    // Simplificado: valida apenas os campos preenchidos corretamente
     const isFormValid =
         formData.name.trim().includes(' ') &&
-        isPasswordValid &&
+        formData.password.length >= 8 &&
         formData.login.length >= 3 &&
-        loginStatus === 'available' &&
         !loading;
 
     const handleSubmit = async (e: FormEvent) => {
