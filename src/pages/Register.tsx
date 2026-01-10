@@ -131,7 +131,6 @@ const Register = () => {
                             value={formData.name}
                             onChange={handleChange}
                             isInvalid={!!apiErrors.name}
-                            required
                         />
                         <Form.Control.Feedback type="invalid">{apiErrors.name}</Form.Control.Feedback>
                     </Form.Group>
@@ -147,18 +146,15 @@ const Register = () => {
                                         placeholder="Login"
                                         value={formData.login}
                                         onChange={handleChange}
-                                        // Só exibe erro (borda vermelha) se o status for REALMENTE 'taken'
-                                        isInvalid={loginStatus === 'taken'}
+                                        isInvalid={formData.login.length >= 3 && loginStatus === 'taken'}
                                         isValid={loginStatus === 'available'}
-                                        required
                                     />
                                     {loginStatus === 'checking' && (
                                         <div className="position-absolute end-0 top-50 translate-middle-y me-2">
                                             <Spinner size="sm" animation="border" />
                                         </div>
                                     )}
-                                    {/* A mensagem abaixo só aparece se o isInvalid for true */}
-                                    <Form.Control.Feedback type="invalid">
+                                    <Form.Control.Feedback type="invalid" style={{ display: loginStatus === 'taken' ? 'block' : 'none' }}>
                                         Este login já está em uso.
                                     </Form.Control.Feedback>
                                 </div>
@@ -173,7 +169,6 @@ const Register = () => {
                                     placeholder="Mínimo 8 caracteres"
                                     value={formData.password}
                                     onChange={handleChange}
-                                    required
                                 />
                             </Form.Group>
                         </Col>
