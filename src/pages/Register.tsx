@@ -11,7 +11,6 @@ const Register = () => {
         password: ''
     });
     const [loading, setLoading] = useState(false);
-    // idle = parado, checking = verificando, available = livre, taken = em uso
     const [loginStatus, setLoginStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
     const [passwordCriteria, setPasswordCriteria] = useState({
         length: false,
@@ -21,26 +20,27 @@ const Register = () => {
     const [apiErrors, setApiErrors] = useState({ general: '', login: '', password: '', name: '' });
     const navigate = useNavigate();
 
-    // Verificação de disponibilidade de login
     const checkLoginAvailability = useCallback(async (login: string) => {
         if (!login || login.length < 3) {
             setLoginStatus('idle');
             return;
         }
+
         setLoginStatus('checking');
         try {
-            // Chama o novo endpoint que criamos no AuthController
             const response = await api.get(`/api/Auth/check-login?login=${login}`);
 
-            // Aceita true direto ou o objeto { available: true } do seu back-end
-            if (response.data === true || response.data?.available === true) {
+            // LÓGICA CORRIGIDA: Só marca como 'taken' se o back-end disser explicitamente que NÃO está disponível
+            const isAvailable = response.data === true || response.data?.available === true;
+
+            if (isAvailable) {
                 setLoginStatus('available');
             } else {
                 setLoginStatus('taken');
             }
         } catch (error) {
-            console.error("Erro ao verificar login:", error);
-            // Em caso de erro (ex: 404 ou rede), deixa como idle para não travar o cadastro
+            // Se a API falhar (CORS, 404, etc), não bloqueamos o usuário.
+            // Deixamos o erro para o momento do Submit.
             setLoginStatus('idle');
         }
     }, []);
@@ -57,12 +57,9 @@ const Register = () => {
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
-
         setApiErrors(prev => ({ ...prev, [name]: '', general: '' }));
 
-        if (name === 'login') {
-            setLoginStatus('idle');
-        }
+        if (name === 'login') setLoginStatus('idle');
 
         if (name === 'name') {
             if (value.trim() && !value.trim().includes(' ')) {
@@ -83,17 +80,16 @@ const Register = () => {
 
     const isPasswordValid = !!(passwordCriteria.length && passwordCriteria.upper && passwordCriteria.number);
 
-    // Validação do formulário: removemos a trava rígida do 'checking' para evitar o erro da imagem
+    // DESTRAVADO: O botão agora ignora o 'checking' e só bloqueia se o status for confirmadamente 'taken'
     const isFormValid =
         formData.name.trim().includes(' ') &&
         isPasswordValid &&
         formData.login.length >= 3 &&
-        loginStatus !== 'taken' && // Só bloqueia se o servidor confirmar que está em uso
+        loginStatus !== 'taken' &&
         !loading;
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-
         if (!isFormValid) return;
 
         setLoading(true);
@@ -104,20 +100,19 @@ const Register = () => {
             toast.success("Usuário cadastrado com sucesso!");
             navigate('/');
         } catch (error: any) {
-            console.error(error);
             const data = error.response?.data;
             const msg = data?.message || (typeof data === 'string' ? data : "Erro ao realizar cadastro.");
 
             if (typeof msg === 'string') {
                 if (msg.toLowerCase().includes('login')) {
                     setApiErrors(prev => ({ ...prev, login: msg }));
+                    setLoginStatus('taken'); // Sincroniza o status caso o back acuse erro
                 } else if (msg.toLowerCase().includes('senha') || msg.toLowerCase().includes('password')) {
                     setApiErrors(prev => ({ ...prev, password: msg }));
                 } else {
                     setApiErrors(prev => ({ ...prev, general: msg }));
                 }
             }
-
             toast.error(typeof msg === 'string' ? msg : "Erro no cadastro.");
         } finally {
             setLoading(false);
@@ -134,15 +129,13 @@ const Register = () => {
                         <Form.Control
                             type="text"
                             name="name"
-                            placeholder="Digite seu nome completo"
+                            placeholder="Digite seu nome e sobrenome"
                             value={formData.name}
                             onChange={handleChange}
                             isInvalid={!!apiErrors.name}
                             required
                         />
-                        <Form.Control.Feedback type="invalid">
-                            {apiErrors.name}
-                        </Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{apiErrors.name}</Form.Control.Feedback>
                     </Form.Group>
 
                     <Row>
@@ -153,10 +146,9 @@ const Register = () => {
                                     <Form.Control
                                         type="text"
                                         name="login"
-                                        placeholder="Escolha um usuário"
+                                        placeholder="Mínimo 3 caracteres"
                                         value={formData.login}
                                         onChange={handleChange}
-                                        // Só fica vermelho se o status for explicitamente 'taken'
                                         isInvalid={loginStatus === 'taken' || !!apiErrors.login}
                                         isValid={loginStatus === 'available'}
                                         required
@@ -178,26 +170,19 @@ const Register = () => {
                                 <Form.Control
                                     type="password"
                                     name="password"
-                                    placeholder="Min. 8 caracteres"
+                                    placeholder="8+ chars, A-Z, 0-9"
                                     value={formData.password}
                                     onChange={handleChange}
                                     isInvalid={!!apiErrors.password}
                                     required
                                 />
-                                {apiErrors.password && (
-                                    <Form.Control.Feedback type="invalid">
-                                        {apiErrors.password}
-                                    </Form.Control.Feedback>
-                                )}
+                                <Form.Control.Feedback type="invalid">{apiErrors.password}</Form.Control.Feedback>
                                 <div className="password-strength-meter mt-2">
                                     <div className="d-flex gap-2">
-                                        <div className={`strength-dot ${passwordCriteria.length ? 'valid' : ''}`} title="Mínimo 8 caracteres"></div>
-                                        <div className={`strength-dot ${passwordCriteria.upper ? 'valid' : ''}`} title="Pelo menos uma maiúscula"></div>
-                                        <div className={`strength-dot ${passwordCriteria.number ? 'valid' : ''}`} title="Pelo menos um número"></div>
+                                        <div className={`strength-dot ${passwordCriteria.length ? 'valid' : ''}`}></div>
+                                        <div className={`strength-dot ${passwordCriteria.upper ? 'valid' : ''}`}></div>
+                                        <div className={`strength-dot ${passwordCriteria.number ? 'valid' : ''}`}></div>
                                     </div>
-                                    <small className="text-muted d-block mt-1" style={{ fontSize: '0.75rem' }}>
-                                        8+ chars, Maiúscula, Número
-                                    </small>
                                 </div>
                             </Form.Group>
                         </Col>
