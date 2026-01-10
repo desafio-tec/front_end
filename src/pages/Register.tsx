@@ -121,7 +121,7 @@ const Register = () => {
         <div className="auth-page">
             <div className="auth-card" style={{ maxWidth: '550px' }}>
                 <h2 className="auth-title">Criar Nova Conta</h2>
-                <Form onSubmit={handleSubmit}>
+                <Form onSubmit={handleSubmit} noValidate>
                     <Form.Group className="mb-3">
                         <Form.Label>Nome Completo</Form.Label>
                         <Form.Control
