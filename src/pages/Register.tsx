@@ -144,7 +144,7 @@ const Register = () => {
                                     <Form.Control
                                         type="text"
                                         name="login"
-                                        placeholder="Min. 3 caracteres"
+                                        placeholder="Login"
                                         value={formData.login}
                                         onChange={handleChange}
                                         // Só exibe erro (borda vermelha) se o status for REALMENTE 'taken'
@@ -170,18 +170,11 @@ const Register = () => {
                                 <Form.Control
                                     type="password"
                                     name="password"
-                                    placeholder="8+ chars, A-Z, 0-9"
+                                    placeholder="Mínimo 8 caracteres"
                                     value={formData.password}
                                     onChange={handleChange}
                                     required
                                 />
-                                <div className="password-strength-meter mt-2">
-                                    <div className="d-flex gap-2">
-                                        <div className={`strength-dot ${passwordCriteria.length ? 'valid' : ''}`}></div>
-                                        <div className={`strength-dot ${passwordCriteria.upper ? 'valid' : ''}`}></div>
-                                        <div className={`strength-dot ${passwordCriteria.number ? 'valid' : ''}`}></div>
-                                    </div>
-                                </div>
                             </Form.Group>
                         </Col>
                     </Row>
