@@ -11,6 +11,7 @@ const Register = () => {
         password: ''
     });
     const [loading, setLoading] = useState(false);
+    // idle = parado, checking = verificando, available = livre, taken = em uso
     const [loginStatus, setLoginStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
     const [passwordCriteria, setPasswordCriteria] = useState({
         length: false,
@@ -20,7 +21,7 @@ const Register = () => {
     const [apiErrors, setApiErrors] = useState({ general: '', login: '', password: '', name: '' });
     const navigate = useNavigate();
 
-    // Debounced login check
+    // Verificação de disponibilidade de login
     const checkLoginAvailability = useCallback(async (login: string) => {
         if (!login || login.length < 3) {
             setLoginStatus('idle');
@@ -28,7 +29,10 @@ const Register = () => {
         }
         setLoginStatus('checking');
         try {
+            // Chama o novo endpoint que criamos no AuthController
             const response = await api.get(`/api/Auth/check-login?login=${login}`);
+
+            // Aceita true direto ou o objeto { available: true } do seu back-end
             if (response.data === true || response.data?.available === true) {
                 setLoginStatus('available');
             } else {
@@ -36,8 +40,7 @@ const Register = () => {
             }
         } catch (error) {
             console.error("Erro ao verificar login:", error);
-            // Se falhar a verificação (ex: rede fora, endpoint inexistente), 
-            // setamos como idle para não exibir o alerta de "em uso" indevidamente.
+            // Em caso de erro (ex: 404 ou rede), deixa como idle para não travar o cadastro
             setLoginStatus('idle');
         }
     }, []);
@@ -55,7 +58,6 @@ const Register = () => {
         const { name, value } = e.target;
         setFormData((prev) => ({ ...prev, [name]: value }));
 
-        // Clear API errors when user types
         setApiErrors(prev => ({ ...prev, [name]: '', general: '' }));
 
         if (name === 'login') {
@@ -80,12 +82,13 @@ const Register = () => {
     };
 
     const isPasswordValid = !!(passwordCriteria.length && passwordCriteria.upper && passwordCriteria.number);
+
+    // Validação do formulário: removemos a trava rígida do 'checking' para evitar o erro da imagem
     const isFormValid =
         formData.name.trim().includes(' ') &&
         isPasswordValid &&
         formData.login.length >= 3 &&
-        loginStatus !== 'taken' &&
-        loginStatus !== 'checking' &&
+        loginStatus !== 'taken' && // Só bloqueia se o servidor confirmar que está em uso
         !loading;
 
     const handleSubmit = async (e: FormEvent) => {
@@ -105,7 +108,6 @@ const Register = () => {
             const data = error.response?.data;
             const msg = data?.message || (typeof data === 'string' ? data : "Erro ao realizar cadastro.");
 
-            // Try to map error to fields if possible
             if (typeof msg === 'string') {
                 if (msg.toLowerCase().includes('login')) {
                     setApiErrors(prev => ({ ...prev, login: msg }));
@@ -154,6 +156,7 @@ const Register = () => {
                                         placeholder="Escolha um usuário"
                                         value={formData.login}
                                         onChange={handleChange}
+                                        // Só fica vermelho se o status for explicitamente 'taken'
                                         isInvalid={loginStatus === 'taken' || !!apiErrors.login}
                                         isValid={loginStatus === 'available'}
                                         required
