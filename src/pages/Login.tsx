@@ -121,7 +121,7 @@ const Login = () => {
                     </Form.Group>
 
                     <div className="d-grid gap-2">
-                        <Button className="btn-premium" type="submit" disabled={loading || isBlocked}>
+                        <Button className="btn-premium" type="submit" disabled={loading || isBlocked || loginData.password.length < 8}>
                             {loading ? <Spinner size="sm" animation="border" /> : 'Entrar no Sistema'}
                         </Button>
                         {isBlocked && (
