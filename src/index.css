@@ -107,6 +107,13 @@ body {
   background-image: none !important;
 }
 
+.invalid-feedback {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+  /* Garante que apareça mesmo sem Bootstrap completo se for o caso */
+}
+
 .caps-lock-warning {
   position: absolute;
   right: 15px;

@@ -9,10 +9,16 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [capsLockActive, setCapsLockActive] = useState(false);
     const [isBlocked, setIsBlocked] = useState(false);
+    const [errors, setErrors] = useState({ login: '', password: '' });
     const navigate = useNavigate();
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setLoginData((prev: typeof loginData) => ({ ...prev, [e.target.name]: e.target.value }));
+        const { name, value } = e.target;
+        setLoginData((prev) => ({ ...prev, [name]: value }));
+        // Limpa erro ao digitar
+        if (errors[name as keyof typeof errors]) {
+            setErrors(prev => ({ ...prev, [name]: '' }));
+        }
     };
 
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -25,7 +31,14 @@ const Login = () => {
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+
+        if (loginData.password.length < 8) {
+            setErrors(prev => ({ ...prev, password: 'A senha deve ter pelo menos 8 caracteres.' }));
+            return;
+        }
+
         setLoading(true);
+        setErrors({ login: '', password: '' });
 
         try {
             const response = await api.post('/api/Auth/login', loginData);
@@ -43,8 +56,11 @@ const Login = () => {
 
             if (status === 400 && (typeof msg === 'string' && msg.toLowerCase().includes('bloqueada'))) {
                 setIsBlocked(true);
+                setErrors(prev => ({ ...prev, login: msg }));
                 toast.error(msg);
             } else if (status === 401) {
+                // Senha incorreta ou usuário não encontrado
+                setErrors(prev => ({ ...prev, password: msg }));
                 toast.warning(msg);
             } else {
                 toast.error(msg);
@@ -67,8 +83,12 @@ const Login = () => {
                             placeholder="Digite seu usuário"
                             value={loginData.login}
                             onChange={handleChange}
+                            isInvalid={!!errors.login}
                             required
                         />
+                        <Form.Control.Feedback type="invalid">
+                            {errors.login}
+                        </Form.Control.Feedback>
                     </Form.Group>
 
                     <Form.Group className="mb-4">
@@ -77,12 +97,12 @@ const Login = () => {
                             <Form.Control
                                 type="password"
                                 name="password"
-                                placeholder="Digite sua senha (mínimo 8 caracteres)"
+                                placeholder="Digite sua senha"
                                 value={loginData.password}
                                 onChange={handleChange}
                                 onKeyDown={handleKeyDown}
                                 disabled={isBlocked}
-                                minLength={8}
+                                isInvalid={!!errors.password}
                                 required
                             />
                             {capsLockActive && (
@@ -91,6 +111,12 @@ const Login = () => {
                                     Caps Lock Ativado
                                 </div>
                             )}
+                            <Form.Control.Feedback type="invalid">
+                                {errors.password}
+                            </Form.Control.Feedback>
+                            <small className={`mt-1 d-block ${loginData.password.length > 0 && loginData.password.length < 8 ? 'text-danger' : 'text-muted'}`} style={{ fontSize: '0.75rem' }}>
+                                Mínimo 8 caracteres
+                            </small>
                         </div>
                     </Form.Group>
 
