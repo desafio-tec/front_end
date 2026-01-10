@@ -84,6 +84,7 @@ const Login = () => {
                             value={loginData.login}
                             onChange={handleChange}
                             isInvalid={!!errors.login}
+                            isValid={loginData.login.length >= 3}
                             required
                         />
                         <Form.Control.Feedback type="invalid">
@@ -103,6 +104,7 @@ const Login = () => {
                                 onKeyDown={handleKeyDown}
                                 disabled={isBlocked}
                                 isInvalid={!!errors.password}
+                                isValid={loginData.password.length >= 8}
                                 required
                             />
                             {capsLockActive && (

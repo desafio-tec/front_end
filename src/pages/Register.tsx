@@ -12,13 +12,14 @@ const Register = () => {
     });
     const [loading, setLoading] = useState(false);
 
+    // Estado inicial neutro para não exibir erro ao carregar a página
     const [loginStatus, setLoginStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
 
     const [apiErrors, setApiErrors] = useState({ general: '', login: '', password: '', name: '' });
     const navigate = useNavigate();
 
+    // Verificação de disponibilidade de login no Render
     const checkLoginAvailability = useCallback(async (login: string) => {
-        // Se tiver menos de 3 caracteres, limpamos o status e não mostramos erro
         if (!login || login.trim().length < 3) {
             setLoginStatus('idle');
             return;
@@ -36,17 +37,15 @@ const Register = () => {
             }
         } catch (error) {
             console.error("Erro na verificação:", error);
-            // Se a API falhar, voltamos para idle para não exibir "login em uso" por engano
             setLoginStatus('idle');
         }
     }, []);
 
     useEffect(() => {
-        // Só dispara a busca se houver pelo menos 3 caracteres
         if (formData.login.length >= 3) {
             const timer = setTimeout(() => {
                 checkLoginAvailability(formData.login);
-            }, 600); // Um tempo um pouco maior para evitar requisições inúteis
+            }, 600);
             return () => clearTimeout(timer);
         } else {
             setLoginStatus('idle');
@@ -58,9 +57,8 @@ const Register = () => {
         setFormData((prev) => ({ ...prev, [name]: value }));
         setApiErrors(prev => ({ ...prev, [name]: '', general: '' }));
 
-        if (name === 'login') {
-            // Se o usuário apagar o campo, o erro some imediatamente
-            if (value.length < 3) setLoginStatus('idle');
+        if (name === 'login' && value.length < 3) {
+            setLoginStatus('idle');
         }
 
         if (name === 'name') {
@@ -70,14 +68,14 @@ const Register = () => {
                 setApiErrors(prev => ({ ...prev, name: '' }));
             }
         }
+    };
 
-    }
-
-    // Simplificado: valida apenas os campos preenchidos corretamente
+    // VALIDAÇÃO CORRIGIDA: Libera o botão se os campos estiverem preenchidos corretamente
     const isFormValid =
         formData.name.trim().includes(' ') &&
         formData.password.length >= 8 &&
         formData.login.length >= 3 &&
+        loginStatus !== 'taken' && // Impede o envio apenas se o erro de duplicidade for confirmado
         !loading;
 
     const handleSubmit = async (e: FormEvent) => {
@@ -114,6 +112,7 @@ const Register = () => {
                             value={formData.name}
                             onChange={handleChange}
                             isInvalid={!!apiErrors.name}
+                            isValid={formData.name.trim().includes(' ')}
                         />
                         <Form.Control.Feedback type="invalid">{apiErrors.name}</Form.Control.Feedback>
                     </Form.Group>
@@ -129,6 +128,7 @@ const Register = () => {
                                         placeholder="Login"
                                         value={formData.login}
                                         onChange={handleChange}
+                                        // O erro só aparece se houver 3+ letras e o status for 'taken'
                                         isInvalid={formData.login.length >= 3 && loginStatus === 'taken'}
                                         isValid={loginStatus === 'available'}
                                     />
@@ -149,15 +149,20 @@ const Register = () => {
                                 <Form.Control
                                     type="password"
                                     name="password"
-                                    placeholder="Mínimo 8 caracteres"
+                                    placeholder="Mínimo 8 caracteres" // Placeholder atualizado
                                     value={formData.password}
                                     onChange={handleChange}
+                                    isValid={formData.password.length >= 8}
                                 />
+                                <small className="text-muted d-block mt-1" style={{ fontSize: '0.70rem' }}>
+                                    Pelo menos 8 caracteres
+                                </small>
                             </Form.Group>
                         </Col>
                     </Row>
 
                     <div className="d-grid gap-2 mt-4">
+                        {/* Botão agora ativa corretamente ao cumprir os requisitos */}
                         <Button className="btn-premium" type="submit" disabled={!isFormValid}>
                             {loading ? <Spinner size="sm" animation="border" /> : 'Finalizar Cadastro'}
                         </Button>
