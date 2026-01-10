@@ -56,6 +56,10 @@ const Register = () => {
         // Clear API errors when user types
         setApiErrors(prev => ({ ...prev, [name]: '', general: '' }));
 
+        if (name === 'login') {
+            setLoginStatus('idle');
+        }
+
         if (name === 'name') {
             if (value.trim() && !value.trim().includes(' ')) {
                 setApiErrors(prev => ({ ...prev, name: 'Por favor, insira seu nome e sobrenome' }));
