@@ -17,7 +17,7 @@ const Register = () => {
         upper: false,
         number: false
     });
-    const [nameError, setNameError] = useState('');
+    const [apiErrors, setApiErrors] = useState({ general: '', login: '', password: '', name: '' });
     const navigate = useNavigate();
 
     // Debounced login check
@@ -29,7 +29,6 @@ const Register = () => {
         setLoginStatus('checking');
         try {
             const response = await api.get(`/api/Auth/check-login?login=${login}`);
-            // Assuming API returns { available: boolean } or even just 200/4xx
             if (response.data === true || response.data?.available === true) {
                 setLoginStatus('available');
             } else {
@@ -37,7 +36,7 @@ const Register = () => {
             }
         } catch (error) {
             console.error("Erro ao verificar login:", error);
-            setLoginStatus('taken'); // Treat error as taken to be safe
+            setLoginStatus('taken');
         }
     }, []);
 
@@ -52,13 +51,16 @@ const Register = () => {
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData((prev: typeof formData) => ({ ...prev, [name]: value }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
+
+        // Clear API errors when user types
+        setApiErrors(prev => ({ ...prev, [name]: '', general: '' }));
 
         if (name === 'name') {
             if (value.trim() && !value.trim().includes(' ')) {
-                setNameError('Por favor, insira seu nome e sobrenome');
+                setApiErrors(prev => ({ ...prev, name: 'Por favor, insira seu nome e sobrenome' }));
             } else {
-                setNameError('');
+                setApiErrors(prev => ({ ...prev, name: '' }));
             }
         }
 
@@ -80,6 +82,7 @@ const Register = () => {
         if (!isFormValid) return;
 
         setLoading(true);
+        setApiErrors({ general: '', login: '', password: '', name: '' });
 
         try {
             await api.post('/api/Auth/register', formData);
@@ -87,7 +90,20 @@ const Register = () => {
             navigate('/');
         } catch (error: any) {
             console.error(error);
-            const msg = error.response?.data || "Erro ao realizar cadastro.";
+            const data = error.response?.data;
+            const msg = data?.message || (typeof data === 'string' ? data : "Erro ao realizar cadastro.");
+
+            // Try to map error to fields if possible
+            if (typeof msg === 'string') {
+                if (msg.toLowerCase().includes('login')) {
+                    setApiErrors(prev => ({ ...prev, login: msg }));
+                } else if (msg.toLowerCase().includes('senha') || msg.toLowerCase().includes('password')) {
+                    setApiErrors(prev => ({ ...prev, password: msg }));
+                } else {
+                    setApiErrors(prev => ({ ...prev, general: msg }));
+                }
+            }
+
             toast.error(typeof msg === 'string' ? msg : "Erro no cadastro.");
         } finally {
             setLoading(false);
@@ -107,11 +123,11 @@ const Register = () => {
                             placeholder="Digite seu nome completo"
                             value={formData.name}
                             onChange={handleChange}
-                            isInvalid={!!nameError}
+                            isInvalid={!!apiErrors.name}
                             required
                         />
                         <Form.Control.Feedback type="invalid">
-                            {nameError}
+                            {apiErrors.name}
                         </Form.Control.Feedback>
                     </Form.Group>
 
@@ -126,7 +142,7 @@ const Register = () => {
                                         placeholder="Escolha um usuário"
                                         value={formData.login}
                                         onChange={handleChange}
-                                        isInvalid={loginStatus === 'taken'}
+                                        isInvalid={loginStatus === 'taken' || !!apiErrors.login}
                                         isValid={loginStatus === 'available'}
                                         required
                                     />
@@ -136,7 +152,7 @@ const Register = () => {
                                         </div>
                                     )}
                                     <Form.Control.Feedback type="invalid">
-                                        Este login já está em uso.
+                                        {apiErrors.login || "Este login já está em uso."}
                                     </Form.Control.Feedback>
                                 </div>
                             </Form.Group>
@@ -150,8 +166,14 @@ const Register = () => {
                                     placeholder="Min. 8 caracteres"
                                     value={formData.password}
                                     onChange={handleChange}
+                                    isInvalid={!!apiErrors.password}
                                     required
                                 />
+                                {apiErrors.password && (
+                                    <Form.Control.Feedback type="invalid">
+                                        {apiErrors.password}
+                                    </Form.Control.Feedback>
+                                )}
                                 <div className="password-strength-meter mt-2">
                                     <div className="d-flex gap-2">
                                         <div className={`strength-dot ${passwordCriteria.length ? 'valid' : ''}`} title="Mínimo 8 caracteres"></div>
