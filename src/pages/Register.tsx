@@ -36,7 +36,9 @@ const Register = () => {
             }
         } catch (error) {
             console.error("Erro ao verificar login:", error);
-            setLoginStatus('taken');
+            // Se falhar a verificação (ex: rede fora, endpoint inexistente), 
+            // setamos como idle para não exibir o alerta de "em uso" indevidamente.
+            setLoginStatus('idle');
         }
     }, []);
 
@@ -77,8 +79,14 @@ const Register = () => {
         }
     };
 
-    const isPasswordValid = passwordCriteria.length && passwordCriteria.upper && passwordCriteria.number;
-    const isFormValid = formData.name.trim().includes(' ') && isPasswordValid && loginStatus === 'available' && !loading;
+    const isPasswordValid = !!(passwordCriteria.length && passwordCriteria.upper && passwordCriteria.number);
+    const isFormValid =
+        formData.name.trim().includes(' ') &&
+        isPasswordValid &&
+        formData.login.length >= 3 &&
+        loginStatus !== 'taken' &&
+        loginStatus !== 'checking' &&
+        !loading;
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
