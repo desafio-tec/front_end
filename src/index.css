@@ -71,3 +71,67 @@ body {
   box-shadow: 0 0 0 0.25rem rgba(118, 75, 162, 0.25);
   border-color: #764ba2;
 }
+
+/* Validations and UX Enhancements */
+.password-strength-meter {
+  padding: 2px 0;
+}
+
+.strength-dot {
+  width: 33%;
+  height: 4px;
+  border-radius: 2px;
+  background: #e0e0e0;
+  transition: background-color 0.3s ease;
+}
+
+.strength-dot.valid {
+  background: #4caf50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.4);
+}
+
+.position-relative .spinner-border {
+  width: 1rem;
+  height: 1rem;
+  border-width: 0.15em;
+  color: #764ba2;
+}
+
+.form-control.is-valid {
+  border-color: #4caf50 !important;
+  background-image: none !important;
+}
+
+.form-control.is-invalid {
+  border-color: #f44336 !important;
+  background-image: none !important;
+}
+
+.caps-lock-warning {
+  position: absolute;
+  right: 15px;
+  top: -30px;
+  background: #fff3cd;
+  color: #856404;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #ffeeba;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  z-index: 10;
+  animation: fadeInDown 0.3s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

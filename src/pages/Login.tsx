@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ChangeEvent } from 'react';
+import { useState, type FormEvent, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Form, Button, Spinner } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -7,10 +7,20 @@ import api from '../services/api';
 const Login = () => {
     const [loginData, setLoginData] = useState({ login: '', password: '' });
     const [loading, setLoading] = useState(false);
+    const [capsLockActive, setCapsLockActive] = useState(false);
+    const [isBlocked, setIsBlocked] = useState(false);
     const navigate = useNavigate();
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setLoginData({ ...loginData, [e.target.name]: e.target.value });
+        setLoginData((prev: typeof loginData) => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (e.getModifierState('CapsLock')) {
+            setCapsLockActive(true);
+        } else {
+            setCapsLockActive(false);
+        }
     };
 
     const handleSubmit = async (e: FormEvent) => {
@@ -27,8 +37,17 @@ const Login = () => {
             navigate('/register');
         } catch (error: any) {
             console.error(error);
+            const status = error.response?.status;
             const msg = error.response?.data || "Erro ao conectar com o servidor.";
-            toast.error(typeof msg === 'string' ? msg : "Login falhou.");
+
+            if (status === 400 && (typeof msg === 'string' && msg.toLowerCase().includes('bloqueada'))) {
+                setIsBlocked(true);
+                toast.error("Conta bloqueada após múltiplas tentativas.");
+            } else if (status === 401) {
+                toast.warning(typeof msg === 'string' ? msg : "Senha incorreta.");
+            } else {
+                toast.error(typeof msg === 'string' ? msg : "Login falhou.");
+            }
         } finally {
             setLoading(false);
         }
@@ -53,20 +72,35 @@ const Login = () => {
 
                     <Form.Group className="mb-4">
                         <Form.Label>Senha</Form.Label>
-                        <Form.Control
-                            type="password"
-                            name="password"
-                            placeholder="Digite sua senha"
-                            value={loginData.password}
-                            onChange={handleChange}
-                            required
-                        />
+                        <div className="position-relative">
+                            <Form.Control
+                                type="password"
+                                name="password"
+                                placeholder="Digite sua senha"
+                                value={loginData.password}
+                                onChange={handleChange}
+                                onKeyDown={handleKeyDown}
+                                disabled={isBlocked}
+                                required
+                            />
+                            {capsLockActive && (
+                                <div className="caps-lock-warning">
+                                    <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                                    Caps Lock Ativado
+                                </div>
+                            )}
+                        </div>
                     </Form.Group>
 
                     <div className="d-grid gap-2">
-                        <Button className="btn-premium" type="submit" disabled={loading}>
+                        <Button className="btn-premium" type="submit" disabled={loading || isBlocked}>
                             {loading ? <Spinner size="sm" animation="border" /> : 'Entrar no Sistema'}
                         </Button>
+                        {isBlocked && (
+                            <Button variant="outline-danger" className="mt-2">
+                                Esqueci minha senha
+                            </Button>
+                        )}
                     </div>
                 </Form>
                 <div className="text-center mt-4">
