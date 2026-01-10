@@ -38,15 +38,16 @@ const Login = () => {
         } catch (error: any) {
             console.error(error);
             const status = error.response?.status;
-            const msg = error.response?.data || "Erro ao conectar com o servidor.";
+            const data = error.response?.data;
+            const msg = data?.message || "Erro de conexão";
 
             if (status === 400 && (typeof msg === 'string' && msg.toLowerCase().includes('bloqueada'))) {
                 setIsBlocked(true);
-                toast.error("Conta bloqueada após múltiplas tentativas.");
+                toast.error(msg);
             } else if (status === 401) {
-                toast.warning(typeof msg === 'string' ? msg : "Senha incorreta.");
+                toast.warning(msg);
             } else {
-                toast.error(typeof msg === 'string' ? msg : "Login falhou.");
+                toast.error(msg);
             }
         } finally {
             setLoading(false);
@@ -76,11 +77,12 @@ const Login = () => {
                             <Form.Control
                                 type="password"
                                 name="password"
-                                placeholder="Digite sua senha"
+                                placeholder="Digite sua senha (mínimo 8 caracteres)"
                                 value={loginData.password}
                                 onChange={handleChange}
                                 onKeyDown={handleKeyDown}
                                 disabled={isBlocked}
+                                minLength={8}
                                 required
                             />
                             {capsLockActive && (
