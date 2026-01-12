@@ -2,7 +2,7 @@ import axios, { type InternalAxiosRequestConfig } from 'axios';
 
 const api = axios.create({
     // Usa a URL do Render em produção ou localhost em desenvolvimento
-    baseURL: "https://back-end-443z.onrender.com",
+    baseURL: "https://api.lhtecnologia.net.br/",
 });
 
 // Interceptor para adicionar o token JWT automaticamente
